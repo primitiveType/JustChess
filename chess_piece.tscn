@@ -1,0 +1,22 @@
+[gd_scene load_steps=5 format=3 uid="uid://cvcwdtoctjlj1"]
+
+[ext_resource type="Texture2D" uid="uid://6vkrd7ufvcs1" path="res://icon.svg" id="1_fc7ql"]
+[ext_resource type="Script" path="res://ChessPiece.cs" id="1_kardu"]
+[ext_resource type="Script" path="res://ClickAndDrag.cs" id="3_fys7o"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1bnky"]
+
+[node name="ChessPiece" type="Node3D" node_paths=PackedStringArray("Sprite3D", "Picker")]
+transform = Transform3D(-0.501556, 0, 0.865125, 0, 1, 0, -0.865125, 0, -0.501556, 0, 0, 0)
+script = ExtResource("1_kardu")
+Sprite3D = NodePath("Area3D/Sprite")
+Picker = NodePath("Area3D")
+
+[node name="Area3D" type="Area3D" parent="."]
+script = ExtResource("3_fys7o")
+
+[node name="Sprite" type="Sprite3D" parent="Area3D"]
+texture = ExtResource("1_fc7ql")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
+shape = SubResource("BoxShape3D_1bnky")

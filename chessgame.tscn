@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3 uid="uid://bmu726s5q5bxf"]
+
+[ext_resource type="Script" path="res://ChessGame.cs" id="1_bl3eh"]
+[ext_resource type="Script" path="res://AnimationQueue.cs" id="2_epxg4"]
+
+[node name="Node3D" type="Node3D"]
+script = ExtResource("1_bl3eh")
+PiecePrefab = "res://chess_piece.tscn"
+AnimationQueuePath = NodePath("AnimationQueue")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
+projection = 1
+size = 10.0
+
+[node name="AnimationQueue" type="Node" parent="."]
+script = ExtResource("2_epxg4")
