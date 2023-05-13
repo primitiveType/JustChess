@@ -1,9 +1,14 @@
+using System;
+using System.Collections.Generic;
 using Godot;
 
 public partial class AnimationQueue : Node
 {
     private Tween TopTween { get; set; }
     private Tween CurrentRunningTween { get; set; }
+    private Object CurrentTweenLock { get; } = new Object();
+
+    private Queue<Tween> Queue { get; } = new Queue<Tween>();
 
     public override void _Ready()
     {
@@ -12,23 +17,35 @@ public partial class AnimationQueue : Node
 
     public void Add(Tween nextTween)
     {
-        if (CurrentRunningTween == null || !CurrentRunningTween.IsRunning())
+        
+        GD.Print($"Tween added on thread {System.Environment.CurrentManagedThreadId}");
+        lock (CurrentTweenLock)
         {
-            CurrentRunningTween = nextTween;
-            TopTween = CurrentRunningTween;
-            CurrentRunningTween.Play();
-            return;
+            if (CurrentRunningTween == null || !CurrentRunningTween.IsRunning())
+            {
+                CurrentRunningTween = nextTween;
+                TopTween = CurrentRunningTween;
+                CurrentRunningTween.Play();
+                return;
+            }
         }
 
         var runningTween = CurrentRunningTween;
 
-        TopTween.Finished += () =>
+        lock (CurrentTweenLock)
         {
-            CurrentRunningTween = nextTween;
-            nextTween.Play();
-        };
+            TopTween.Finished += () =>
+            {
+                lock (CurrentTweenLock)
+                {
+                    CurrentRunningTween = nextTween;
+                }
 
-        TopTween = nextTween;
+                nextTween.Play();
+            };
+
+            TopTween = nextTween;
+        }
     }
 
 

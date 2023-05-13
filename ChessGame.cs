@@ -1,5 +1,7 @@
 using System;
 using System.Linq;
+using System.Runtime.ExceptionServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Godot;
 using Rudzoft.ChessLib;
@@ -8,9 +10,11 @@ using Rudzoft.ChessLib.Fen;
 using Rudzoft.ChessLib.MoveGeneration;
 using Rudzoft.ChessLib.Types;
 using UciSharp;
+using Board = JustChess.Board;
 
 public partial class ChessGame : Node
 {
+    private int _moves;
     public IGame Game { get; private set; }
 
     [Export] public string PiecePrefab { get; set; }
@@ -18,12 +22,18 @@ public partial class ChessGame : Node
     public AnimationQueue AnimationQueue => GetNode<AnimationQueue>(AnimationQueuePath);
     private Task GameTask { get; set; }
 
+
+    public IChessPlayer WhitePlayer { get; private set; }
+    public IChessPlayer BlackPlayer { get; private set; }
+    [Export] public Board Board { get; private set; }
+    private CancellationTokenSource TokenSource { get; } = new();
+
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
         GD.Print("Creating chess game.");
 
-        GameTask = Task.Run(StartGame);
+        GameTask = Task.Run(() => StartGame(TokenSource.Token));
 
         // make the moves necessary to create a mate
 
@@ -39,17 +49,29 @@ public partial class ChessGame : Node
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-        GameTask?.Dispose();
+        TokenSource.Cancel();
+
+        // GameTask.Dispose();
     }
 
-    private async Task StartGame()
+    public override void _Process(double delta)
+    {
+        base._Process(delta);
+        if (GameTask != null && GameTask.IsFaulted)
+        {
+            var exception = GameTask.Exception.InnerException;
+            GameTask.Dispose();
+            GameTask = null;
+            GD.PrintErr(exception);
+        }
+    }
+
+    private async Task StartGame(CancellationToken token)
     { // construct game and start a new game
         // throw new NotImplementedException();
         Game = GameFactory.Create(Fen.StartPositionFen);
         Game.Pos.IsProbing = false;
-
-        IPosition position = Game.Pos;
-        State state = new();
+        Game.Pos.PieceAdded += PosOnPieceAdded;
 
 
         PackedScene piecePrefab = (PackedScene)ResourceLoader.Load(PiecePrefab);
@@ -61,25 +83,45 @@ public partial class ChessGame : Node
             AddChild(piece);
         }
 
-        Player player = new Player();
-        AiPlayer engine = new AiPlayer();
-        await engine.Initialize();
-        while (!Game.Pos.IsMate)
+        // WhitePlayer = new Player(Game);
+        WhitePlayer = new AiPlayer();
+        BlackPlayer = new AiPlayer();
+        _moves = 0;
+        while (!Game.Pos.IsMate && !token.IsCancellationRequested)
         {
-            Move playerMove = await player.MakeMove(Game);
-            GD.Print($"Player making move {playerMove}.");
-            Game.Pos.MakeMove(playerMove, Game.Pos.State);
-
-            GD.Print($"Setting engine position to {Game.Pos.FenNotation}.");
-            await engine.Engine.SetPositionAsync($"{Game.Pos.FenNotation}");
-            await engine.Engine.WaitForReadyAsync();
-            
-            Move engineMove = await engine.MakeMove(Game);
-            GD.Print($"Engine making move {engineMove}.");
-            Game.Pos.MakeMove(engineMove, Game.Pos.State);
+            await PlayerMove(WhitePlayer);
+            if (Game.Pos.IsMate || token.IsCancellationRequested)
+            {
+                break;
+            }
+            await PlayerMove(BlackPlayer);
         }
+
+        token.ThrowIfCancellationRequested();
+        GD.Print($"Checkmate! in {_moves}.");
+    }
+
+    private async Task BlackPlayerMove()
+    {
         
-        GD.Print("Checkmate!");
+    }
+
+    private async Task PlayerMove(IChessPlayer player)
+    {
+        Move playerMove = await player.MakeMove(Game);
+        GD.Print($"White Player making move {playerMove}.");
+
+        Game.Pos.MakeMove(playerMove, Game.Pos.State);
+        GD.Print($"Setting engine position to {Game.Pos.FenNotation}.");
+        _moves++;
+    }
+
+    private void PosOnPieceAdded(object sender, PieceAddedEventArgs args)
+    {
+        PackedScene piecePrefab = (PackedScene)ResourceLoader.Load(PiecePrefab);
+        ChessPiece piece = piecePrefab.Instantiate<ChessPiece>();
+        piece.Initialize(this, args.Square);
+        AddChild(piece);
     }
 
 
@@ -101,11 +143,53 @@ public partial class ChessGame : Node
 
     public class Player : IChessPlayer
     {
+        public IGame Game { get; }
+
+        public Player(IGame game)
+        {
+            Game = game;
+        }
+
+        private TaskCompletionSource<Move> MoveTask { get; set; }
+
+        public async Task<Move> MakeMove(IGame game)
+        {
+            MoveTask = new TaskCompletionSource<Move>();
+            return await MoveTask.Task;
+        }
+
+        public bool ReceiveMoveFromHumanPlayer(Move move)
+        {
+            if (MoveTask == null)
+            {
+                return false;
+            }
+
+            if (Game.Pos.IsLegal(move))
+            {
+                return MoveTask.TrySetResult(move);
+            }
+
+            return false;
+        }
+
+        public bool HumanPlayerCanMove => true;
+    }
+
+    public class DumbAi : IChessPlayer
+    {
         public async Task<Move> MakeMove(IGame game)
         {
             //let player make move... fake it for now.
             return game.Pos.GenerateMoves().First().Move;
         }
+
+        public bool ReceiveMoveFromHumanPlayer(Move move)
+        {
+            return true;
+        }
+
+        public bool HumanPlayerCanMove { get; } = false;
     }
 
     public class AiPlayer : IChessPlayer
@@ -125,6 +209,9 @@ public partial class ChessGame : Node
                 await Initialize();
             }
 
+            await Engine.SetPositionAsync($"{game.Pos.FenNotation}");
+            await Engine.WaitForReadyAsync();
+
             string moveStr = await Engine.GoAsync();
 
             GD.Print($"Engine made move {moveStr}");
@@ -136,6 +223,13 @@ public partial class ChessGame : Node
             return move;
         }
 
+        public bool ReceiveMoveFromHumanPlayer(Move move)
+        {
+            return true;
+        }
+
+        public bool HumanPlayerCanMove { get; } = false;
+
         public async Task Initialize()
         {
             await Engine.StartAsync();
@@ -144,9 +238,4 @@ public partial class ChessGame : Node
             Initialized = true;
         }
     }
-}
-
-public interface IChessPlayer
-{
-    Task<Move> MakeMove(IGame game);
 }

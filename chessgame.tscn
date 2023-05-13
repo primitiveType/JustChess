@@ -1,17 +1,33 @@
-[gd_scene load_steps=3 format=3 uid="uid://bmu726s5q5bxf"]
+[gd_scene load_steps=5 format=3 uid="uid://bmu726s5q5bxf"]
 
 [ext_resource type="Script" path="res://ChessGame.cs" id="1_bl3eh"]
 [ext_resource type="Script" path="res://AnimationQueue.cs" id="2_epxg4"]
+[ext_resource type="Texture2D" uid="uid://crnp0x3byg7di" path="res://chessAssets/chessBoardWhite.png" id="3_hho35"]
+[ext_resource type="Script" path="res://Board.cs" id="4_4t67w"]
 
-[node name="Node3D" type="Node3D"]
+[node name="Node3D" type="Node3D" node_paths=PackedStringArray("Board")]
 script = ExtResource("1_bl3eh")
 PiecePrefab = "res://chess_piece.tscn"
 AnimationQueuePath = NodePath("AnimationQueue")
+Board = NodePath("Board")
 
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
 projection = 1
-size = 10.0
+size = 5.0
 
 [node name="AnimationQueue" type="Node" parent="."]
 script = ExtResource("2_epxg4")
+
+[node name="Board" type="Node3D" parent="." node_paths=PackedStringArray("BottomLeftposition")]
+script = ExtResource("4_4t67w")
+BottomLeftposition = NodePath("BottomLeft")
+
+[node name="Sprite3D" type="Sprite3D" parent="Board"]
+billboard = 1
+double_sided = false
+texture_filter = 0
+texture = ExtResource("3_hho35")
+
+[node name="BottomLeft" type="Node3D" parent="Board"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.12216, 0.0806579, 0)

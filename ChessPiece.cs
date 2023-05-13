@@ -11,12 +11,26 @@ public partial class ChessPiece : Node3D
     private Square currentSquare { get; set; }
     [Export] private ClickAndDrag Picker { get; set; }
 
+    [Export] private Resource WhitePawnImage { get; set; }
+    [Export] private Resource WhiteKnightImage { get; set; }
+    [Export] private Resource WhiteBishopImage { get; set; }
+    [Export] private Resource WhiteRookImage { get; set; }
+    [Export] private Resource WhiteQueenImage { get; set; }
+    [Export] private Resource WhiteKingImage { get; set; }
+    [Export] private Resource BlackPawnImage { get; set; }
+    [Export] private Resource BlackKnightImage { get; set; }
+    [Export] private Resource BlackBishopImage { get; set; }
+    [Export] private Resource BlackRookImage { get; set; }
+    [Export] private Resource BlackQueenImage { get; set; }
+    [Export] private Resource BlackKingImage { get; set; }
+
+    private IChessPlayer Player => _piece.IsBlack ? Game.BlackPlayer : Game.WhitePlayer;
+    
     private ChessGame Game { get; set; }
     // private Tween Tween { get; set; }
 
     public override void _Ready()
     {
-        ;
         base._Ready();
         Picker.DragRelease += PickerOnDragRelease;
         Picker.Drag += PickerOnDrag;
@@ -24,6 +38,10 @@ public partial class ChessPiece : Node3D
 
     private void PickerOnDrag(object sender, DragEventArgs args)
     {
+        if (!Player.HumanPlayerCanMove)
+        {
+            return;
+        }
         Vector2 mousePosition = GetViewport().GetMousePosition();
         Vector3 worldPosition = args.Camera3D.ProjectPosition(mousePosition, 0);
         worldPosition.Z = 0;
@@ -32,18 +50,20 @@ public partial class ChessPiece : Node3D
 
     private void PickerOnDragRelease(object sender, DragReleaseEventArgs args)
     {
+        if (!Player.HumanPlayerCanMove)
+        {
+            return;
+        }
         GD.Print("Drag release!");
         Vector2 mousePosition = GetViewport().GetMousePosition();
         Vector3 worldPosition = args.Camera3D.ProjectPosition(mousePosition, Position.Z);
-        Square moveSquare = GetPositionSquare(worldPosition);
-        var move = new Move(currentSquare, moveSquare);
-        if (Game.Game.Pos.IsLegal(move))
-        {
-            Game.Game.Pos.TakeMove(move);
-        }
-        else
+        Square moveSquare = Game.Board.GetSquareFromWorldPosition(new Vector2(worldPosition.X, worldPosition.Y));
+        Move move = new Move(currentSquare, moveSquare);
+
+        if (Player.ReceiveMoveFromHumanPlayer(move))
         {
             SetSquare(currentSquare);
+
         }
     }
 
@@ -51,42 +71,44 @@ public partial class ChessPiece : Node3D
     {
         Game = game;
         _piece = game.Game.Pos.GetPiece(square);
-        if (_piece.IsBlack)
-        {
-            Sprite3D.Modulate = new Color(.25f, .25f, .25f, 1);
-        }
-        else
-        {
-            Sprite3D.Modulate = new Color(5, 5, 5, 5);
-        }
+        // if (_piece.IsBlack)
+        // {
+        //     Sprite3D.Modulate = new Color(.25f, .25f, .25f, 1);
+        // }
+        // else
+        // {
+        //     Sprite3D.Modulate = new Color(5, 5, 5, 5);
+        // }
 
         switch (_piece.Type())
         {
             case PieceTypes.NoPieceType:
                 break;
             case PieceTypes.Pawn:
-                Sprite3D.Scale = new Vector3(.25f, .25f, .25f);
+                Sprite3D.Texture = (Texture2D)(_piece.IsBlack ? BlackPawnImage : WhitePawnImage);
                 break;
             case PieceTypes.Knight:
-                Sprite3D.Scale = new Vector3(.35f, .35f, .35f);
+                Sprite3D.Texture = (Texture2D)(_piece.IsBlack ? BlackKnightImage : WhiteKnightImage);
                 break;
             case PieceTypes.Bishop:
-                Sprite3D.Scale = new Vector3(.25f, .65f, .25f);
+                Sprite3D.Texture = (Texture2D)(_piece.IsBlack ? BlackBishopImage : WhiteBishopImage);
                 break;
             case PieceTypes.Rook:
-                Sprite3D.Scale = new Vector3(.35f, .85f, .35f);
+                Sprite3D.Texture = (Texture2D)(_piece.IsBlack ? BlackRookImage : WhiteRookImage);
                 break;
             case PieceTypes.Queen:
-                Sprite3D.Scale = new Vector3(.5f, 1f, .5f);
+                Sprite3D.Texture = (Texture2D)(_piece.IsBlack ? BlackQueenImage : WhiteQueenImage);
                 break;
             case PieceTypes.King:
-                Sprite3D.Scale = new Vector3(1, 1, 1);
+                Sprite3D.Texture = (Texture2D)(_piece.IsBlack ? BlackKingImage : WhiteKingImage);
                 break;
             case PieceTypes.PieceTypeNb:
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
         }
+
+        Sprite3D.Offset = new Vector2(0, Sprite3D.Texture.GetSize().Y /2f);
 
 
         SetSquare(square);
@@ -102,7 +124,7 @@ public partial class ChessPiece : Node3D
         {
             Tween tween = CreateTween();
             tween.Stop();
-            tween.TweenInterval(0);
+            tween.TweenInterval(0.91f);
             tween.Connect("finished", new Callable(this, nameof(AnimateCapturePiece)));
             Game.AnimationQueue.Add(tween);
         }
@@ -115,17 +137,17 @@ public partial class ChessPiece : Node3D
 
     private void SetSquare(Square square)
     {
-        Transform = new Transform3D(Basis, GetSquarePosition(square));
+        Transform = new Transform3D(Basis, Game.Board.GetIsoMetricPositionFromSquare(square));
         currentSquare = square;
     }
 
     private void SetSquareDeferred(Square square)
     {
         currentSquare = square;
-        Vector3 destination = GetSquarePosition(square);
+        Vector3 destination = Game.Board.GetIsoMetricPositionFromSquare(square);
         Tween tween = CreateTween();
         tween.Stop();
-        tween.TweenProperty(this, "position", destination, 1f);
+        tween.TweenProperty(this, "position", destination, .1f);
         Game.AnimationQueue.Add(tween);
     }
 
@@ -137,19 +159,11 @@ public partial class ChessPiece : Node3D
         }
     }
 
-    private Vector3 GetSquarePosition(Square square)
+    public override void _ExitTree()
     {
-        int index = (int)square.Value;
-        return new Vector3(index % 8, index / 8, 0) - new Vector3(4, 4, 0);
-    }
-
-    private Square GetPositionSquare(Vector3 position)
-    {
-        Vector3 adjustedPos = position + new Vector3(4, 4, 0);
-        int x = (int)Math.Clamp(adjustedPos.X, 0, 8);
-        int y = (int)Math.Clamp(adjustedPos.Y, 0, 8);
-
-        int index = (y * 8) + x;
-        return index;
+        base._ExitTree();
+        
+        Game.Game.Pos.PieceMoved -= PosOnPieceMoved;
+        Game.Game.Pos.PieceRemoved -= PosOnPieceRemoved;
     }
 }

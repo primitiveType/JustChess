@@ -1,22 +1,50 @@
-[gd_scene load_steps=5 format=3 uid="uid://cvcwdtoctjlj1"]
+[gd_scene load_steps=16 format=3 uid="uid://cvcwdtoctjlj1"]
 
-[ext_resource type="Texture2D" uid="uid://6vkrd7ufvcs1" path="res://icon.svg" id="1_fc7ql"]
 [ext_resource type="Script" path="res://ChessPiece.cs" id="1_kardu"]
+[ext_resource type="Texture2D" uid="uid://bbem53eptr4cy" path="res://chessAssets/whitePawn.png" id="2_asph1"]
+[ext_resource type="Texture2D" uid="uid://bvc0auj5lrl3p" path="res://chessAssets/whiteKnightRight.png" id="3_7cwgd"]
 [ext_resource type="Script" path="res://ClickAndDrag.cs" id="3_fys7o"]
+[ext_resource type="Texture2D" uid="uid://bimjn1phts53l" path="res://chessAssets/whiteBishopRight.png" id="4_h7hth"]
+[ext_resource type="Texture2D" uid="uid://cyj58tplptb8g" path="res://chessAssets/whiteRook.png" id="5_lyu7t"]
+[ext_resource type="Texture2D" uid="uid://clscramedqfid" path="res://chessAssets/whiteQueen.png" id="6_yej2l"]
+[ext_resource type="Texture2D" uid="uid://c5j2vehcboc3k" path="res://chessAssets/whiteKing.png" id="7_3b06s"]
+[ext_resource type="Texture2D" uid="uid://tnmge43qwlp0" path="res://chessAssets/blackPawn.png" id="8_vyhld"]
+[ext_resource type="Texture2D" uid="uid://tuc1rsol8cgj" path="res://chessAssets/blackKnightLeft.png" id="9_4gej3"]
+[ext_resource type="Texture2D" uid="uid://b4t6trn5xl527" path="res://chessAssets/blackBishopLeft.png" id="10_y7a5p"]
+[ext_resource type="Texture2D" uid="uid://fb4501i44mr" path="res://chessAssets/blackRook.png" id="11_xkt8b"]
+[ext_resource type="Texture2D" uid="uid://c52v0ak0qr3fx" path="res://chessAssets/blackQueen.png" id="12_5wndq"]
+[ext_resource type="Texture2D" uid="uid://gw4cintpcv7w" path="res://chessAssets/blackKing.png" id="13_cuo0q"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_1bnky"]
+margin = 0.001
+size = Vector3(0.159, 0.317, 0.136)
 
 [node name="ChessPiece" type="Node3D" node_paths=PackedStringArray("Sprite3D", "Picker")]
 transform = Transform3D(-0.501556, 0, 0.865125, 0, 1, 0, -0.865125, 0, -0.501556, 0, 0, 0)
 script = ExtResource("1_kardu")
 Sprite3D = NodePath("Area3D/Sprite")
 Picker = NodePath("Area3D")
+WhitePawnImage = ExtResource("2_asph1")
+WhiteKnightImage = ExtResource("3_7cwgd")
+WhiteBishopImage = ExtResource("4_h7hth")
+WhiteRookImage = ExtResource("5_lyu7t")
+WhiteQueenImage = ExtResource("6_yej2l")
+WhiteKingImage = ExtResource("7_3b06s")
+BlackPawnImage = ExtResource("8_vyhld")
+BlackKnightImage = ExtResource("9_4gej3")
+BlackBishopImage = ExtResource("10_y7a5p")
+BlackRookImage = ExtResource("11_xkt8b")
+BlackQueenImage = ExtResource("12_5wndq")
+BlackKingImage = ExtResource("13_cuo0q")
 
 [node name="Area3D" type="Area3D" parent="."]
 script = ExtResource("3_fys7o")
 
 [node name="Sprite" type="Sprite3D" parent="Area3D"]
-texture = ExtResource("1_fc7ql")
+offset = Vector2(0, 16.251)
+billboard = 1
+texture_filter = 0
+texture = ExtResource("10_y7a5p")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
 shape = SubResource("BoxShape3D_1bnky")
