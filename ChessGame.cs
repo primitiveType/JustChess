@@ -19,6 +19,7 @@ public partial class ChessGame : Node
 
     [Export] public string PiecePrefab { get; set; }
     [Export] private NodePath AnimationQueuePath { get; set; }
+    [Export] private GameEndPanel GameEndUi { get; set; }
     public AnimationQueue AnimationQueue => GetNode<AnimationQueue>(AnimationQueuePath);
     private Task GameTask { get; set; }
 
@@ -87,23 +88,29 @@ public partial class ChessGame : Node
         WhitePlayer = new AiPlayer();
         BlackPlayer = new AiPlayer();
         _moves = 0;
-        while (!Game.Pos.IsMate && !token.IsCancellationRequested)
+        while (!GameOver() && !token.IsCancellationRequested)
         {
             await PlayerMove(WhitePlayer);
-            if (Game.Pos.IsMate || token.IsCancellationRequested)
+            if (GameOver() || token.IsCancellationRequested)
             {
                 break;
             }
+
             await PlayerMove(BlackPlayer);
         }
+        
 
         token.ThrowIfCancellationRequested();
         GD.Print($"Checkmate! in {_moves}.");
+        await AnimationQueue.WaitForAnimationsToComplete();
+        
+        GameEndUi.SetEndGameState(ChessEndState.Checkmate, ChessEndStateVictor.Black);
+        GameEndUi.Visible = true;
     }
 
-    private async Task BlackPlayerMove()
+    private bool GameOver()
     {
-        
+        return Game.Pos.IsDraw(0) || Game.Pos.IsMate;
     }
 
     private async Task PlayerMove(IChessPlayer player)

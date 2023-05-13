@@ -24,6 +24,8 @@ public partial class ChessPiece : Node3D
     [Export] private Resource BlackQueenImage { get; set; }
     [Export] private Resource BlackKingImage { get; set; }
 
+    private float TweenInterval { get; } = .1f;
+
     private IChessPlayer Player => _piece.IsBlack ? Game.BlackPlayer : Game.WhitePlayer;
     
     private ChessGame Game { get; set; }
@@ -122,9 +124,11 @@ public partial class ChessPiece : Node3D
     {
         if (args.EmptiedSquare == currentSquare && args.RemovedPiece == _piece)
         {
+            currentSquare = Square.None;
+
             Tween tween = CreateTween();
             tween.Stop();
-            tween.TweenInterval(0.91f);
+            tween.TweenInterval(TweenInterval);
             tween.Connect("finished", new Callable(this, nameof(AnimateCapturePiece)));
             Game.AnimationQueue.Add(tween);
         }
@@ -147,7 +151,7 @@ public partial class ChessPiece : Node3D
         Vector3 destination = Game.Board.GetIsoMetricPositionFromSquare(square);
         Tween tween = CreateTween();
         tween.Stop();
-        tween.TweenProperty(this, "position", destination, .1f);
+        tween.TweenProperty(this, "position", destination, TweenInterval);
         Game.AnimationQueue.Add(tween);
     }
 
@@ -157,8 +161,11 @@ public partial class ChessPiece : Node3D
         {
             SetSquareDeferred(args.To);
         }
+        
     }
 
+    
+    
     public override void _ExitTree()
     {
         base._ExitTree();
