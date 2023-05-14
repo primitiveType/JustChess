@@ -14,7 +14,7 @@ public partial class AnimationQueue : Node
 
         if (CurrentTween == null)
         {
-            GD.Print($"No tweens playing. Starting new tween.");
+            GD.Print($"No tweens playing. Starting new tween on {System.Threading.Thread.CurrentThread.ManagedThreadId}.");
             CurrentTween = nextTween;
             CurrentTween.Play();
         }

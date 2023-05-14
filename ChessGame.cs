@@ -1,20 +1,33 @@
 using System;
-using System.Runtime.ExceptionServices;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Godot;
+using MetaProperties.SynchronizationContexts;
+using Newtonsoft.Json;
 using Rudzoft.ChessLib;
-using Rudzoft.ChessLib.Enums;
 using Rudzoft.ChessLib.Factories;
 using Rudzoft.ChessLib.Fen;
-using Rudzoft.ChessLib.MoveGeneration;
 using Rudzoft.ChessLib.Types;
 using Board = JustChess.Board;
+using File = System.IO.File;
+
+public class GameRecord
+{
+    public string StartFen { get; set; }
+    public string EndFen { get; set; }
+
+    public List<Move> Moves { get; } = new();
+}
 
 public partial class ChessGame : Node
 {
     private int _moves;
     public IGame Game { get; private set; }
+    private GameRecord GameRecord { get; set; } = new();
+
 
     [Export] public string PiecePrefab { get; set; }
     [Export] private NodePath AnimationQueuePath { get; set; }
@@ -31,9 +44,11 @@ public partial class ChessGame : Node
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
+        SynchronizationContext.SetSynchronizationContext(new SingleThreadSynchronizationContext() );
+        ;
         GD.Print("Creating chess game.");
 
-        GameTask = Task.Run(() => StartGame(TokenSource.Token));
+        GameTask = Task.Run(() => StartGame(TokenSource.Token, @"E:\Unity Projects\GodotChess\5_14_2023 1_56_06 PM.jcr", true));
 
         // make the moves necessary to create a mate
 
@@ -44,6 +59,10 @@ public partial class ChessGame : Node
     {
         base._ExitTree();
         Dispose();
+        string recordStr = JsonConvert.SerializeObject(GameRecord);
+        string path = DateTime.Now.ToString().Replace(":", "_").Replace("/", "_") + ".jcr";
+        File.WriteAllText(path, recordStr);
+        GD.Print($"Game record saved to {path}.");
     }
 
     protected override void Dispose(bool disposing)
@@ -59,58 +78,61 @@ public partial class ChessGame : Node
         base._Process(delta);
         if (GameTask != null && GameTask.IsFaulted)
         {
-            var exception = GameTask.Exception.InnerException;
+            Exception exception = GameTask.Exception.InnerException;
             GameTask.Dispose();
             GameTask = null;
             GD.PrintErr(exception);
         }
     }
 
-    private async Task StartGame(CancellationToken token)
+    private async Task StartGame(CancellationToken token, string loadPath = null, bool playOutMoves = false)
     { // construct game and start a new game
-        // throw new NotImplementedException();
-        // Game = GameFactory.Create(Fen.StartPositionFen);
-        string promitionFen = "rnbqkbnr/pppppppP/8/8/8/8/8/RNBQKBNR w KQkq - 0 1";
-        Game = GameFactory.Create(promitionFen);
-        Game.Pos.IsProbing = false;
-        Game.Pos.PieceAdded += PosOnPieceAdded;
 
-
-        PackedScene piecePrefab = (PackedScene)ResourceLoader.Load(PiecePrefab);
-
-        foreach (Square square in Game.Pos.Pieces())
+        if (loadPath == null)
         {
-            ChessPiece piece = piecePrefab.Instantiate<ChessPiece>();
-            piece.Initialize(this, square, Game.Pos.GetPiece(square));
-            AddChild(piece);
+            Game = CreateDefaultGame();
+        }
+        else
+        {
+            Game = LoadGameFromPath(loadPath, !playOutMoves);
         }
 
+        Game.Pos.IsProbing = false;
+        Game.Pos.PieceAdded += PosOnPieceAdded;
+        LoadPieces();
+
+        if (playOutMoves) //animate moves that are already in the record.
+        {
+            await PlayMovesInRecord().ConfigureAwait(true);
+        }
+
+        // return;
         // WhitePlayer = new Player(Game);
         WhitePlayer = new AiPlayer();
         BlackPlayer = new AiPlayer();
         _moves = 0;
 
-        //detect winner based on last move
         //detect legal moves by generating full list.
         bool whiteWins = false;
         while (!GameOver() && !token.IsCancellationRequested)
         {
             await PlayerMove(WhitePlayer).ConfigureAwait(true);
-            await AnimationQueue.WaitForAnimationsToComplete();
+            await AnimationQueue.WaitForAnimationsToComplete().ConfigureAwait(true);
             if (GameOver() || token.IsCancellationRequested)
             {
+                //detect winner based on last move
                 whiteWins = true;
                 break;
             }
 
             await PlayerMove(BlackPlayer).ConfigureAwait(true);
-            await AnimationQueue.WaitForAnimationsToComplete();
+            await AnimationQueue.WaitForAnimationsToComplete().ConfigureAwait(true);
         }
 
 
         token.ThrowIfCancellationRequested();
         GD.Print($"Checkmate! in {_moves}.");
-        await AnimationQueue.WaitForAnimationsToComplete();
+        await AnimationQueue.WaitForAnimationsToComplete().ConfigureAwait(true);
 
         if (Game.Pos.IsDraw(0))
         {
@@ -124,14 +146,71 @@ public partial class ChessGame : Node
         GameEndUi.Visible = true;
     }
 
+    private void LoadPieces()
+    {
+        PackedScene piecePrefab = (PackedScene)ResourceLoader.Load(PiecePrefab);
+
+        foreach (Square square in Game.Pos.Pieces())
+        {
+            ChessPiece piece = piecePrefab.Instantiate<ChessPiece>();
+            piece.Initialize(this, square, Game.Pos.GetPiece(square));
+            AddChild(piece);
+        }
+    }
+
+    private async Task PlayMovesInRecord()
+    {
+        // WhitePlayer = new Player(Game);
+        var script = new ScriptedPlayer(GameRecord);
+        _moves = 0;
+
+        //detect winner based on last move
+        //detect legal moves by generating full list.
+        bool whiteWins = false;
+        for (int i = 0; i < GameRecord.Moves.Count; i++)
+        {
+            await PlayerMove(script, false).ConfigureAwait(true);
+            await AnimationQueue.WaitForAnimationsToComplete().ConfigureAwait(true);
+        }
+    }
+
+    private IGame LoadGameFromPath(string loadPath, bool jumpToEnd)
+    {
+        string movesString = File.ReadAllText(loadPath);
+        GameRecord = JsonConvert.DeserializeObject<GameRecord>(movesString);
+        IGame game;
+        if (jumpToEnd)
+        {
+            game = GameFactory.Create(GameRecord.EndFen);
+        }
+        else
+        {
+            game = GameFactory.Create(GameRecord.StartFen);
+        }
+
+        return game;
+    }
+
+    private IGame CreateDefaultGame(string fen = Fen.StartPositionFen)
+    {
+        IGame game = GameFactory.Create(fen);
+        GameRecord.StartFen = fen;
+        return game;
+    }
+
     private bool GameOver()
     {
         return Game.Pos.IsDraw(0) || Game.Pos.IsMate;
     }
 
-    private async Task PlayerMove(IChessPlayer player)
+    private async Task PlayerMove(IChessPlayer player, bool record = true)
     {
         Move playerMove = await player.MakeMove(Game).ConfigureAwait(true);
+        if (record)
+        {
+            GameRecord.Moves.Add(playerMove);
+        }
+
         GD.Print($"White Player making move {playerMove}.");
 
         Game.Pos.MakeMove(playerMove, Game.Pos.State);
@@ -144,20 +223,16 @@ public partial class ChessGame : Node
         Tween tween = CreateTween();
         tween.Stop();
         tween.TweenInterval(ChessPiece.TweenInterval);
-        Callable callable = Callable.From(() => {CreatePiece(args);});
+        Callable callable = Callable.From(() => { CreatePiece(args); });
         tween.Connect("finished", callable);
-        tween.Connect("finished", new Callable(this, nameof(DoNothing)));
-
         AnimationQueue.Add(tween);
     }
 
-    public void DoNothing()
-    {
-        
-    }
+    public void DoNothing() { }
+
     public void CreatePiece(PieceAddedEventArgs args)
     {
-        GD.Print($"Piece added on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}.");
+        GD.Print($"Piece added on thread {Thread.CurrentThread.ManagedThreadId}.");
         PackedScene piecePrefab = (PackedScene)ResourceLoader.Load(PiecePrefab);
         ChessPiece piece = piecePrefab.Instantiate<ChessPiece>();
         piece.Initialize(this, args.Square, args.NewPiece);

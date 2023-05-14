@@ -4,6 +4,31 @@ using Rudzoft.ChessLib;
 using Rudzoft.ChessLib.Types;
 using UciSharp;
 
+
+public class ScriptedPlayer : IChessPlayer
+{
+    private GameRecord Record { get; }
+    private int currentMove = 0;
+
+    public ScriptedPlayer(GameRecord record)
+    {
+        Record = record;
+    }
+
+    public Task<Move> MakeMove(IGame game)
+    {
+        Move move = Record.Moves[currentMove++];
+        return Task.FromResult(move);
+    }
+
+    public bool ReceiveMoveFromHumanPlayer(Move move)
+    {
+        throw new System.NotImplementedException();
+    }
+
+    public bool HumanPlayerCanMove { get; } = false;
+}
+
 public class AiPlayer : IChessPlayer
 {
     public AiPlayer()
