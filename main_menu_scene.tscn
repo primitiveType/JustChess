@@ -1,0 +1,62 @@
+[gd_scene load_steps=3 format=3 uid="uid://du1bp5yxljxpr"]
+
+[ext_resource type="Theme" uid="uid://dbjtx3qldxiis" path="res://menu_theme_1.tres" id="1_4pljr"]
+[ext_resource type="Script" path="res://MainMenu.cs" id="2_nvlvj"]
+
+[node name="Control" type="Control" node_paths=PackedStringArray("PlayButton", "ExitButton")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_4pljr")
+script = ExtResource("2_nvlvj")
+PlayButton = NodePath("VBoxContainer/Buttons/PlayButton")
+ExitButton = NodePath("VBoxContainer/Buttons/ExitButton")
+ChessScene = "res://chess_game_scene.tscn"
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="RichTextLabel" type="RichTextLabel" parent="VBoxContainer"]
+layout_mode = 2
+bbcode_enabled = true
+text = "[font_size=100][center]Just Chess![/center][/font_size]
+"
+fit_content = true
+
+[node name="Control" type="Control" parent="VBoxContainer"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+
+[node name="Buttons" type="VBoxContainer" parent="VBoxContainer"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="PlayButton" type="MenuButton" parent="VBoxContainer/Buttons"]
+layout_mode = 2
+theme = ExtResource("1_4pljr")
+toggle_mode = false
+text = "Play Chess!"
+flat = false
+
+[node name="ExitButton" type="MenuButton" parent="VBoxContainer/Buttons"]
+layout_mode = 2
+toggle_mode = false
+text = "Exit"
+flat = false

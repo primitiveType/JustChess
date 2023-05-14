@@ -23,14 +23,9 @@ public class AiPlayer : IChessPlayer
 
         await Engine.SetPositionAsync($"{game.Pos.FenNotation}");
         await Engine.WaitForReadyAsync();
-
         string moveStr = await Engine.GoAsync();
-
         GD.Print($"Engine made move {moveStr}");
-        Square from = new(Rank.All[int.Parse(moveStr[1].ToString()) - 1], GetFile(moveStr[0]));
-        Square to = new(Rank.All[int.Parse(moveStr[3].ToString()) - 1], GetFile(moveStr[2]));
-
-        Move move = Move.Create(from, to);
+        var move = ChessGameExtenions.GetMoveFromEngineString(moveStr);
         GD.Print($"rudz move {move}");
         return move;
     }

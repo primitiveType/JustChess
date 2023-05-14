@@ -1,0 +1,80 @@
+[gd_scene load_steps=7 format=3 uid="uid://r02k1xll2dtp"]
+
+[ext_resource type="Script" path="res://ChessGame.cs" id="1_gd8lg"]
+[ext_resource type="Script" path="res://AnimationQueue.cs" id="2_jteo7"]
+[ext_resource type="Script" path="res://Board.cs" id="3_paadb"]
+[ext_resource type="Texture2D" uid="uid://crnp0x3byg7di" path="res://chessAssets/chessBoardWhite.png" id="4_5wqux"]
+[ext_resource type="Script" path="res://GameEndPanel.cs" id="5_d7aow"]
+[ext_resource type="PackedScene" uid="uid://du1bp5yxljxpr" path="res://main_menu_scene.tscn" id="6_p5egw"]
+
+[node name="Node3D" type="Node3D" node_paths=PackedStringArray("GameEndUi", "Board")]
+script = ExtResource("1_gd8lg")
+PiecePrefab = "res://chess_piece.tscn"
+AnimationQueuePath = NodePath("AnimationQueue")
+GameEndUi = NodePath("UI/Game end panel")
+Board = NodePath("Board")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
+projection = 1
+size = 5.0
+
+[node name="AnimationQueue" type="Node" parent="."]
+script = ExtResource("2_jteo7")
+
+[node name="Board" type="Node3D" parent="." node_paths=PackedStringArray("BottomLeftposition")]
+script = ExtResource("3_paadb")
+BottomLeftposition = NodePath("BottomLeft")
+
+[node name="Sprite3D" type="Sprite3D" parent="Board"]
+billboard = 1
+double_sided = false
+texture_filter = 0
+texture = ExtResource("4_5wqux")
+
+[node name="BottomLeft" type="Node3D" parent="Board"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.12216, 0.0806579, 0)
+
+[node name="UI" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Game end panel" type="Panel" parent="UI" node_paths=PackedStringArray("ReturnButton", "EndStateLabel")]
+visible = false
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 28.775
+anchor_bottom = 4.025
+script = ExtResource("5_d7aow")
+ReturnButton = NodePath("VBoxContainer/Return To Menu")
+EndStateLabel = NodePath("VBoxContainer/Game Status")
+MainScene = ExtResource("6_p5egw")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/Game end panel"]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 50.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="RichTextLabel" type="RichTextLabel" parent="UI/Game end panel/VBoxContainer"]
+layout_mode = 2
+bbcode_enabled = true
+text = "[center]Game Over![/center]"
+fit_content = true
+
+[node name="Game Status" type="RichTextLabel" parent="UI/Game end panel/VBoxContainer"]
+layout_mode = 2
+bbcode_enabled = true
+text = "[center]Game Over![/center]"
+fit_content = true
+
+[node name="Return To Menu" type="MenuButton" parent="UI/Game end panel/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Return to menu"
+flat = false

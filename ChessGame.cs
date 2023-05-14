@@ -69,7 +69,9 @@ public partial class ChessGame : Node
     private async Task StartGame(CancellationToken token)
     { // construct game and start a new game
         // throw new NotImplementedException();
-        Game = GameFactory.Create(Fen.StartPositionFen);
+        // Game = GameFactory.Create(Fen.StartPositionFen);
+        string promitionFen = "rnbqkbnr/pppppppP/8/8/8/8/8/RNBQKBNR w KQkq - 0 1";
+        Game = GameFactory.Create(promitionFen);
         Game.Pos.IsProbing = false;
         Game.Pos.PieceAdded += PosOnPieceAdded;
 
@@ -79,7 +81,7 @@ public partial class ChessGame : Node
         foreach (Square square in Game.Pos.Pieces())
         {
             ChessPiece piece = piecePrefab.Instantiate<ChessPiece>();
-            piece.Initialize(this, square);
+            piece.Initialize(this, square, Game.Pos.GetPiece(square));
             AddChild(piece);
         }
 
@@ -90,16 +92,19 @@ public partial class ChessGame : Node
 
         //detect winner based on last move
         //detect legal moves by generating full list.
+        bool whiteWins = false;
         while (!GameOver() && !token.IsCancellationRequested)
         {
-            await PlayerMove(WhitePlayer);
+            await PlayerMove(WhitePlayer).ConfigureAwait(true);
+            await AnimationQueue.WaitForAnimationsToComplete();
             if (GameOver() || token.IsCancellationRequested)
             {
+                whiteWins = true;
                 break;
             }
 
-            Game.Pos.GenerateMoves(MoveGenerationType.Quiets);
-            await PlayerMove(BlackPlayer);
+            await PlayerMove(BlackPlayer).ConfigureAwait(true);
+            await AnimationQueue.WaitForAnimationsToComplete();
         }
 
 
@@ -107,18 +112,26 @@ public partial class ChessGame : Node
         GD.Print($"Checkmate! in {_moves}.");
         await AnimationQueue.WaitForAnimationsToComplete();
 
-        GameEndUi.SetEndGameState(ChessEndState.Checkmate, ChessEndStateVictor.Black);
+        if (Game.Pos.IsDraw(0))
+        {
+            GameEndUi.SetEndGameState(ChessEndState.Stalemate, ChessEndStateVictor.Draw);
+        }
+        else
+        {
+            GameEndUi.SetEndGameState(ChessEndState.Checkmate, whiteWins ? ChessEndStateVictor.White : ChessEndStateVictor.Black);
+        }
+
         GameEndUi.Visible = true;
     }
 
     private bool GameOver()
     {
-        return Game.Pos.IsDraw(50) || Game.Pos.IsMate;
+        return Game.Pos.IsDraw(0) || Game.Pos.IsMate;
     }
 
     private async Task PlayerMove(IChessPlayer player)
     {
-        Move playerMove = await player.MakeMove(Game);
+        Move playerMove = await player.MakeMove(Game).ConfigureAwait(true);
         GD.Print($"White Player making move {playerMove}.");
 
         Game.Pos.MakeMove(playerMove, Game.Pos.State);
@@ -128,9 +141,26 @@ public partial class ChessGame : Node
 
     private void PosOnPieceAdded(object sender, PieceAddedEventArgs args)
     {
+        Tween tween = CreateTween();
+        tween.Stop();
+        tween.TweenInterval(ChessPiece.TweenInterval);
+        Callable callable = Callable.From(() => {CreatePiece(args);});
+        tween.Connect("finished", callable);
+        tween.Connect("finished", new Callable(this, nameof(DoNothing)));
+
+        AnimationQueue.Add(tween);
+    }
+
+    public void DoNothing()
+    {
+        
+    }
+    public void CreatePiece(PieceAddedEventArgs args)
+    {
+        GD.Print($"Piece added on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}.");
         PackedScene piecePrefab = (PackedScene)ResourceLoader.Load(PiecePrefab);
         ChessPiece piece = piecePrefab.Instantiate<ChessPiece>();
-        piece.Initialize(this, args.Square);
+        piece.Initialize(this, args.Square, args.NewPiece);
         AddChild(piece);
     }
 }

@@ -24,7 +24,7 @@ public partial class ChessPiece : Node3D
     [Export] private Resource BlackQueenImage { get; set; }
     [Export] private Resource BlackKingImage { get; set; }
 
-    private float TweenInterval { get; } = .1f;
+    public static float TweenInterval { get; } = .1f;
 
     private IChessPlayer Player => _piece.IsBlack ? Game.BlackPlayer : Game.WhitePlayer;
     
@@ -69,10 +69,10 @@ public partial class ChessPiece : Node3D
         }
     }
 
-    public void Initialize(ChessGame game, Square square)
+    public void Initialize(ChessGame game, Square square, Piece type)
     {
         Game = game;
-        _piece = game.Game.Pos.GetPiece(square);
+        _piece = type;
         // if (_piece.IsBlack)
         // {
         //     Sprite3D.Modulate = new Color(.25f, .25f, .25f, 1);
