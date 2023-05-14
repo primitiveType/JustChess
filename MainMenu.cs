@@ -1,12 +1,10 @@
 using Godot;
-using System;
-using UciSharp;
 
 public partial class MainMenu : Control
 {
     [Export] private Button PlayButton { get; set; }
     [Export] private Button ExitButton { get; set; }
-    [Export] private Resource ChessScene { get; set; }
+    [Export] private string ChessScene { get; set; }
 
 
     // Called when the node enters the scene tree for the first time.
@@ -26,7 +24,7 @@ public partial class MainMenu : Control
     private void PlayButtonOnPressed()
     {
         GD.Print("Lets play chess!");
-        GetTree().ChangeSceneToFile(ChessScene.ResourcePath);
+        GetTree().ChangeSceneToFile(ChessScene);
     }
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.

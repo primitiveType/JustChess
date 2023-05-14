@@ -1,0 +1,1 @@
+﻿public delegate void DragEvent(object sender, DragEventArgs args);

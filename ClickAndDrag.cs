@@ -49,31 +49,3 @@ public partial class ClickAndDrag : Area3D
 
     }
 }
-
-public delegate void DragEvent(object sender, DragEventArgs args);
-
-public class DragEventArgs
-{
-    public Camera3D Camera3D { get; }
-    public Vector3 Position { get; }
-
-    public DragEventArgs(Camera3D camera3D, Vector3 position)
-    {
-        Camera3D = camera3D;
-        Position = position;
-    }
-}
-
-public delegate void DragReleaseEvent(object sender, DragReleaseEventArgs args);
-
-public class DragReleaseEventArgs
-{
-    public Camera3D Camera3D { get; }
-    public Vector3 Position { get; }
-
-    public DragReleaseEventArgs(Camera3D camera3D, Vector3 position)
-    {
-        Camera3D = camera3D;
-        Position = position;
-    }
-}
