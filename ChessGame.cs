@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Godot;
@@ -42,13 +40,13 @@ public partial class ChessGame : Node
     private CancellationTokenSource TokenSource { get; } = new();
 
     // Called when the node enters the scene tree for the first time.
-    public override void _Ready()
+    public override async void _Ready()
     {
-        SynchronizationContext.SetSynchronizationContext(new SingleThreadSynchronizationContext() );
+        // SynchronizationContext.SetSynchronizationContext(new Shaman.Runtime.SingleThreadSynchronizationContext());
         ;
-        GD.Print("Creating chess game.");
+        Print("Creating chess game.");
 
-        GameTask = Task.Run(() => StartGame(TokenSource.Token, @"E:\Unity Projects\GodotChess\5_14_2023 1_56_06 PM.jcr", true));
+        await StartGame(TokenSource.Token, @"E:\Unity Projects\GodotChess\5_14_2023 1_56_06 PM.jcr", true);
 
         // make the moves necessary to create a mate
 
@@ -62,7 +60,12 @@ public partial class ChessGame : Node
         string recordStr = JsonConvert.SerializeObject(GameRecord);
         string path = DateTime.Now.ToString().Replace(":", "_").Replace("/", "_") + ".jcr";
         File.WriteAllText(path, recordStr);
-        GD.Print($"Game record saved to {path}.");
+        Print($"Game record saved to {path}.");
+    }
+
+    private void Print(string message)
+    {
+        GD.Print($"{GetThread()} {message}");
     }
 
     protected override void Dispose(bool disposing)
@@ -87,7 +90,7 @@ public partial class ChessGame : Node
 
     private async Task StartGame(CancellationToken token, string loadPath = null, bool playOutMoves = false)
     { // construct game and start a new game
-
+        Print("Starting game.");
         if (loadPath == null)
         {
             Game = CreateDefaultGame();
@@ -103,7 +106,7 @@ public partial class ChessGame : Node
 
         if (playOutMoves) //animate moves that are already in the record.
         {
-            await PlayMovesInRecord().ConfigureAwait(true);
+            await PlayMovesInRecord();
         }
 
         // return;
@@ -113,34 +116,32 @@ public partial class ChessGame : Node
         _moves = 0;
 
         //detect legal moves by generating full list.
-        bool whiteWins = false;
         while (!GameOver() && !token.IsCancellationRequested)
         {
-            await PlayerMove(WhitePlayer).ConfigureAwait(true);
-            await AnimationQueue.WaitForAnimationsToComplete().ConfigureAwait(true);
+            await PlayerMove(WhitePlayer);
+            await AnimationQueue.WaitForAnimationsToComplete();
             if (GameOver() || token.IsCancellationRequested)
             {
-                //detect winner based on last move
-                whiteWins = true;
                 break;
             }
 
-            await PlayerMove(BlackPlayer).ConfigureAwait(true);
-            await AnimationQueue.WaitForAnimationsToComplete().ConfigureAwait(true);
+            await PlayerMove(BlackPlayer);
+            await AnimationQueue.WaitForAnimationsToComplete();
         }
 
 
         token.ThrowIfCancellationRequested();
-        GD.Print($"Checkmate! in {_moves}.");
-        await AnimationQueue.WaitForAnimationsToComplete().ConfigureAwait(true);
+        Print($"Checkmate! in {_moves}.");
+        await AnimationQueue.WaitForAnimationsToComplete();
 
+        
         if (Game.Pos.IsDraw(0))
         {
             GameEndUi.SetEndGameState(ChessEndState.Stalemate, ChessEndStateVictor.Draw);
         }
         else
         {
-            GameEndUi.SetEndGameState(ChessEndState.Checkmate, whiteWins ? ChessEndStateVictor.White : ChessEndStateVictor.Black);
+            GameEndUi.SetEndGameState(ChessEndState.Checkmate, Game.Pos.SideToMove == Rudzoft.ChessLib.Types.Player.Black ? ChessEndStateVictor.White : ChessEndStateVictor.Black);
         }
 
         GameEndUi.Visible = true;
@@ -161,7 +162,7 @@ public partial class ChessGame : Node
     private async Task PlayMovesInRecord()
     {
         // WhitePlayer = new Player(Game);
-        var script = new ScriptedPlayer(GameRecord);
+        ScriptedPlayer script = new ScriptedPlayer(GameRecord);
         _moves = 0;
 
         //detect winner based on last move
@@ -169,8 +170,8 @@ public partial class ChessGame : Node
         bool whiteWins = false;
         for (int i = 0; i < GameRecord.Moves.Count; i++)
         {
-            await PlayerMove(script, false).ConfigureAwait(true);
-            await AnimationQueue.WaitForAnimationsToComplete().ConfigureAwait(true);
+            await PlayerMove(script, false);
+            await AnimationQueue.WaitForAnimationsToComplete();
         }
     }
 
@@ -205,17 +206,22 @@ public partial class ChessGame : Node
 
     private async Task PlayerMove(IChessPlayer player, bool record = true)
     {
-        Move playerMove = await player.MakeMove(Game).ConfigureAwait(true);
+        Move playerMove = await player.MakeMove(Game);
         if (record)
         {
             GameRecord.Moves.Add(playerMove);
         }
 
-        GD.Print($"White Player making move {playerMove}.");
+        Print($"${GetThread()}White Player making move {playerMove}.");
 
         Game.Pos.MakeMove(playerMove, Game.Pos.State);
-        GD.Print($"Setting engine position to {Game.Pos.FenNotation}.");
+        Print($"Setting engine position to {Game.Pos.FenNotation}.");
         _moves++;
+    }
+
+    private string GetThread()
+    {
+        return $"[{System.Threading.Thread.CurrentThread.ManagedThreadId}]";
     }
 
     private void PosOnPieceAdded(object sender, PieceAddedEventArgs args)
@@ -228,11 +234,10 @@ public partial class ChessGame : Node
         AnimationQueue.Add(tween);
     }
 
-    public void DoNothing() { }
 
     public void CreatePiece(PieceAddedEventArgs args)
     {
-        GD.Print($"Piece added on thread {Thread.CurrentThread.ManagedThreadId}.");
+        Print($"Piece added on thread {Thread.CurrentThread.ManagedThreadId}.");
         PackedScene piecePrefab = (PackedScene)ResourceLoader.Load(PiecePrefab);
         ChessPiece piece = piecePrefab.Instantiate<ChessPiece>();
         piece.Initialize(this, args.Square, args.NewPiece);
