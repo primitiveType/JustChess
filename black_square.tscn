@@ -1,0 +1,13 @@
+[gd_scene load_steps=4 format=3 uid="uid://djkvpnta2e27x"]
+
+[ext_resource type="Material" uid="uid://x67ijujc88n6" path="res://Materials/black_square.tres" id="1_avc4e"]
+[ext_resource type="Script" path="res://BoardSquare3d.cs" id="2_l4b4w"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_c2qa4"]
+
+[node name="BlackSquare" type="MeshInstance3D"]
+material_override = ExtResource("1_avc4e")
+mesh = SubResource("BoxMesh_c2qa4")
+skeleton = NodePath("")
+surface_material_override/0 = ExtResource("1_avc4e")
+script = ExtResource("2_l4b4w")
