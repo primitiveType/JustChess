@@ -6,11 +6,12 @@ namespace JustChess;
 
 public partial class Board : Node3D
 {
-    [Export] public Node3D BottomLeftposition { get; private set; }
-
     private const float sqrt3 = 1.732f;
     private const float gridCoordsToWorldCoords = .01f * 16;
     private const float worldCoordsToGridCoords = 1 / gridCoordsToWorldCoords;
+    [Export] public Node3D BottomLeftposition { get; private set; }
+    [Export] public Camera3D Camera { get; private set; }
+
 
     public override void _Ready()
     {
@@ -19,9 +20,9 @@ public partial class Board : Node3D
         {
             for (int y = 0; y < 8; y++)
             {
-                var cart = new Vector2(x, y);
-                var iso = CartesianToIsometric(cart);
-                var cart2 = IsometricToCartesian(iso);
+                Vector2 cart = new(x, y);
+                Vector2 iso = CartesianToIsometric(cart);
+                Vector2 cart2 = IsometricToCartesian(iso);
 
                 if (cart != cart2)
                 {
@@ -31,7 +32,7 @@ public partial class Board : Node3D
         }
     }
 
-    public Vector3 GetIsoMetricPositionFromSquare(Square square)
+    public virtual Vector3 GetIsoMetricPositionFromSquare(Square square)
     {
         Vector2 cart = new(square.File.AsInt(), square.Rank.AsInt());
 
@@ -39,19 +40,19 @@ public partial class Board : Node3D
         // Vector2 iso = new(cart.X + cart.Y, (cart.Y - cart.X) / 2f);
         Vector2 iso = CartesianToIsometric(cart);
         Vector2 scaled = iso * gridCoordsToWorldCoords;
-        Vector3 final = new Vector3(BottomLeftposition.Position.X + scaled.X, BottomLeftposition.Position.Y + scaled.Y,
+        Vector3 final = new(BottomLeftposition.Position.X + scaled.X, BottomLeftposition.Position.Y + scaled.Y,
             8 + BottomLeftposition.Position.Z - scaled.Y);
         return final;
     }
 
-    public Square GetSquareFromWorldPosition(Vector2 position)
+    public virtual Square GetSquareFromWorldPosition(Vector2 position)
     {
         Vector2 cartesianPosition = IsometricToCartesian(position - new Vector2(BottomLeftposition.Position.X, BottomLeftposition.Position.Y));
-        var gridPosition = cartesianPosition * worldCoordsToGridCoords;
+        Vector2 gridPosition = cartesianPosition * worldCoordsToGridCoords;
         gridPosition = new Vector2(Math.Clamp(gridPosition.X, 0, 7), Math.Clamp(gridPosition.Y, 0, 7));
         // Vector2 cartesian = new((cartesianPosition.X - cartesianPosition.Y) / 1.5f, cartesianPosition.X / 3f + cartesianPosition.Y / 1.5f);
         // cartesian = new Vector2(Math.Clamp(cartesian.X, 0, 7), Math.Clamp(cartesian.Y, 0, 7));
-        int index = (int)Math.Floor((gridPosition.Y * 8) + gridPosition.X) - 1;
+        int index = (int)Math.Floor(gridPosition.Y * 8 + gridPosition.X) - 1;
         return index;
     }
 
@@ -77,8 +78,8 @@ public partial class Board : Node3D
         // y_Cart = ( 2 * y_Iso – x_Iso ) / 2;
         // return new Vector2(((2 * iso.Y) + iso.X) / 2f, ((2 * iso.Y - iso.X) / 2f));
 
-        var x = (iso.X - (2 * iso.Y)) / 2f;
-        var y = (2 * iso.Y) + x;
+        float x = (iso.X - 2 * iso.Y) / 2f;
+        float y = 2 * iso.Y + x;
 
         return new Vector2(x, y);
     }

@@ -2,6 +2,7 @@ using System;
 using Godot;
 using Rudzoft.ChessLib;
 using Rudzoft.ChessLib.Types;
+using Board = JustChess.Board;
 
 public partial class ChessPiece : Node3D
 {
@@ -36,6 +37,14 @@ public partial class ChessPiece : Node3D
         base._Ready();
         Picker.DragRelease += PickerOnDragRelease;
         Picker.Drag += PickerOnDrag;
+    }
+
+    public override void _Process(double delta)
+    {
+        base._Process(delta);
+        var prio = (int) (Game.Board.Camera.UnprojectPosition(this.Sprite3D.GlobalTransform.Origin).Y / 10 );
+
+        this.Sprite3D.RenderPriority = prio;
     }
 
     private void PickerOnDrag(object sender, DragEventArgs args)

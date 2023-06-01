@@ -1,30 +1,38 @@
-[gd_scene load_steps=7 format=3 uid="uid://r02k1xll2dtp"]
+[gd_scene load_steps=11 format=3 uid="uid://r02k1xll2dtp"]
 
 [ext_resource type="Script" path="res://ChessGame.cs" id="1_gd8lg"]
+[ext_resource type="Script" path="res://plugins/control_camera3d/nodes/control_camera_3d.gd" id="2_hb16s"]
 [ext_resource type="Script" path="res://AnimationQueue.cs" id="2_jteo7"]
 [ext_resource type="Script" path="res://Board.cs" id="3_paadb"]
 [ext_resource type="Texture2D" uid="uid://crnp0x3byg7di" path="res://chessAssets/chessBoardWhite.png" id="4_5wqux"]
 [ext_resource type="Script" path="res://GameEndPanel.cs" id="5_d7aow"]
 [ext_resource type="PackedScene" uid="uid://du1bp5yxljxpr" path="res://main_menu_scene.tscn" id="6_p5egw"]
+[ext_resource type="Script" path="res://Board3D.cs" id="7_qujh5"]
+[ext_resource type="PackedScene" uid="uid://djkvpnta2e27x" path="res://black_square.tscn" id="7_qwqnb"]
+[ext_resource type="PackedScene" uid="uid://kgi80xsa6rux" path="res://white_square.tscn" id="9_ds030"]
 
 [node name="Node3D" type="Node3D" node_paths=PackedStringArray("GameEndUi", "Board")]
 script = ExtResource("1_gd8lg")
 PiecePrefab = "res://chess_piece.tscn"
 AnimationQueuePath = NodePath("AnimationQueue")
 GameEndUi = NodePath("UI/Game end panel")
-Board = NodePath("Board")
+Board = NodePath("Board3d")
 
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
 projection = 1
-size = 5.0
+current = true
+size = 15.0
+script = ExtResource("2_hb16s")
 
 [node name="AnimationQueue" type="Node" parent="."]
 script = ExtResource("2_jteo7")
 
-[node name="Board" type="Node3D" parent="." node_paths=PackedStringArray("BottomLeftposition")]
+[node name="Board" type="Node3D" parent="." node_paths=PackedStringArray("BottomLeftposition", "Camera")]
+visible = false
 script = ExtResource("3_paadb")
 BottomLeftposition = NodePath("BottomLeft")
+Camera = NodePath("../Camera3D")
 
 [node name="Sprite3D" type="Sprite3D" parent="Board"]
 billboard = 1
@@ -78,3 +86,13 @@ layout_mode = 2
 size_flags_horizontal = 4
 text = "Return to menu"
 flat = false
+
+[node name="Board3d" type="Node3D" parent="." node_paths=PackedStringArray("BottomLeftposition", "Camera")]
+script = ExtResource("7_qujh5")
+BlackSquare = ExtResource("7_qwqnb")
+WhiteSquare = ExtResource("9_ds030")
+BottomLeftposition = NodePath("../Board/BottomLeft")
+Camera = NodePath("../Camera3D")
+
+[node name="BottomLeft" type="Node3D" parent="Board3d"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.12216, 0.0806579, 0)

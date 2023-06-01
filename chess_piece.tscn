@@ -41,9 +41,11 @@ BlackKingImage = ExtResource("13_cuo0q")
 script = ExtResource("3_fys7o")
 
 [node name="Sprite" type="Sprite3D" parent="Area3D"]
-offset = Vector2(0, 16.251)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.252, 0)
+pixel_size = 0.04
 billboard = 1
 texture_filter = 0
+render_priority = 1
 texture = ExtResource("10_y7a5p")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
