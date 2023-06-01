@@ -35,4 +35,5 @@ public class Player : IChessPlayer
     }
 
     public bool HumanPlayerCanMove => true;
+    public void Dispose() { }
 }

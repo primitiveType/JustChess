@@ -1,8 +1,9 @@
+using System;
 using System.Threading.Tasks;
 using Rudzoft.ChessLib;
 using Rudzoft.ChessLib.Types;
 
-public interface IChessPlayer
+public interface IChessPlayer : IDisposable
 {
     Task<Move> MakeMove(IGame game);
     bool ReceiveMoveFromHumanPlayer(Move move);

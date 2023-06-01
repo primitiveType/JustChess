@@ -18,4 +18,5 @@ public class DumbAi : IChessPlayer
     }
 
     public bool HumanPlayerCanMove { get; } = false;
+    public void Dispose() { }
 }

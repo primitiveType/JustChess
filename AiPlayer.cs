@@ -27,6 +27,7 @@ public class ScriptedPlayer : IChessPlayer
     }
 
     public bool HumanPlayerCanMove { get; } = false;
+    public void Dispose() { }
 }
 
 public class AiPlayer : IChessPlayer
@@ -68,5 +69,10 @@ public class AiPlayer : IChessPlayer
         await Engine.StartGameAsync();
         await Engine.WaitForReadyAsync();
         Initialized = true;
+    }
+
+    public void Dispose()
+    {
+        Engine?.Dispose();
     }
 }

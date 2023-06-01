@@ -46,7 +46,8 @@ public partial class ChessGame : Node
         ;
         Print("Creating chess game.");
 
-        await StartGame(TokenSource.Token, @"E:\Unity Projects\GodotChess\5_14_2023 1_56_06 PM.jcr", true);
+        // await StartGame(TokenSource.Token, @"E:\Unity Projects\GodotChess\5_21_2023 12_59_25 PM.jcr", true);
+        await StartGame(TokenSource.Token);
 
         // make the moves necessary to create a mate
 
@@ -57,10 +58,14 @@ public partial class ChessGame : Node
     {
         base._ExitTree();
         Dispose();
+        WhitePlayer?.Dispose();
+        BlackPlayer?.Dispose();
+        
         string recordStr = JsonConvert.SerializeObject(GameRecord);
         string path = DateTime.Now.ToString().Replace(":", "_").Replace("/", "_") + ".jcr";
         File.WriteAllText(path, recordStr);
         Print($"Game record saved to {path}.");
+        
     }
 
     private void Print(string message)
@@ -145,6 +150,8 @@ public partial class ChessGame : Node
         }
 
         GameEndUi.Visible = true;
+
+        GetTree().ChangeSceneToFile("res://chess_game_scene.tscn");
     }
 
     private void LoadPieces()
@@ -173,6 +180,8 @@ public partial class ChessGame : Node
             await PlayerMove(script, false);
             await AnimationQueue.WaitForAnimationsToComplete();
         }
+        
+        script.Dispose();
     }
 
     private IGame LoadGameFromPath(string loadPath, bool jumpToEnd)
